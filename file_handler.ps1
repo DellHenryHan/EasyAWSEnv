@@ -2,31 +2,21 @@ Function Make-CfFile {
 	[CmdletBinding()]  
     Param( 
         [Parameter(Mandatory=$True)]  
-        [string]$IniFile,
+        [string]$iniFile,
         [Hashtable]$extraParam=@{},
-        [string]$OutFile="$env:temp\temp.json",
-        [string]$templatePath=$PSScriptRoot+"\templates"
+        [string]$outFile="$env:temp\temp.json",
+        [string]$templatePath=$PSScriptRoot+"\templates",
+		[string]$description="Template composed by easyawsenv"
     )
-    $iniContent=Get-IniContent $IniFile
+    $Sections=Get-InstanceSections $iniFile $extraParam
     $jsonContent=@()
     $jsonContent+='{'
     $jsonContent+='    "AWSTemplateFormatVersion": "2010-09-09",'
-    $jsonContent+='    "Description": "Template composed by easyawsenv",'
+    $jsonContent+='    "Description": "'+$description+'",'
     $jsonContent+='    "Resources": {'
-        
-    if(-not $iniContent["GLOBAL"]){
-        $iniContent["GLOBAL"]
-    }
-    if($extraParam.Count -gt 0){$extraParam.Keys|%{$iniContent["GLOBAL"][$_]=$extraParam[$_]}}
-    $globalContent=$iniContent["GLOBAL"]
-    $iniContent.Remove("GLOBAL")
-    foreach($k in $globalContent.keys){
-        $iniContent.Keys|%{$iniContent[$_][$k]=$globalContent[$k]}
-    }
-
-    foreach($k in $iniContent.Keys){
+    foreach($k in $Sections.Keys){
         try{
-            $jsonContent+=(Collect-InstanceInfo -Key $k -Section $iniContent[$k] -templatePath $templatePath)
+            $jsonContent+=(Collect-InstanceInfo -Key $k -Section $Sections[$k] -templatePath $templatePath)
         }
         catch [Exception]{
             $_.Exception.message
@@ -36,7 +26,46 @@ Function Make-CfFile {
     $jsonContent[$jsonContent.Count-1]=$jsonContent[$jsonContent.Count-1].TrimEnd(",")
     $jsonContent+="    }"
     $jsonContent+="}"
-    $jsonContent|Out-File $OutFile -Encoding ascii
+    $jsonContent|Out-File $outFile -Encoding ascii
+}
+
+Function Get-InstanceSections{
+	Param( 
+        [Parameter(Mandatory=$True)]  
+        [string]$iniFile,
+        [Hashtable]$extraParam
+    )
+	$iniContent=Get-IniContent $iniFile
+	if(-not $iniContent["GLOBAL"]){
+        $iniContent["GLOBAL"]=@{}
+    }
+	if($extraParam.Count -gt 0){
+		$extraParam.Keys|%{$iniContent[$_]=$extraParam[$_]}
+	}
+	$globalContent=$iniContent["GLOBAL"]
+    $iniContent.Remove("GLOBAL")
+	foreach($k in $globalContent.keys){
+        $iniContent.Keys|%{if(-not $iniContent[$_].ContainsKey($k)){$iniContent[$_][$k]=$globalContent[$k]}}
+    }
+	foreach($Section in $iniContent.keys){
+		$iniContent[$Section]["ResourceName"]=$Section.replace("._","")
+        $EnvVariables=@()
+		$iniContent[$Section].Keys|%{$replaced=$iniContent[$Section][$_].replace('\','\\').replace('"','\"').replace("'","''");$EnvVariables+="""[Environment]::SetEnvironmentVariable('$_','$replaced','Machine')"",`n"}
+		if($iniContent[$Section]["DC"]){
+			$iniContent[$Section]["FetchDcIp"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["'+$iniContent[$Section]["DC"]+'", "PrivateIp"]},"'',''Machine'')"]]},'
+		}
+		else{
+			$iniContent[$Section]["FetchDcIp"]=""
+		}
+		if(-not $iniContent[$Section]["InstanceName"]){
+			$iniContent[$Section]["InstanceName"]=""
+		}
+		if(-not $iniContent[$Section]["InstanceRoleProfile"]){
+			$iniContent[$Section]n["InstanceRoleProfile"]='""'
+		}
+		$iniContent[$Section]["EnvVariables"]=$EnvVariables
+    }
+	return $iniContent
 }
 
 Function Collect-InstanceInfo{
@@ -46,23 +75,7 @@ Function Collect-InstanceInfo{
         [HashTable]$Section, 
         [string]$templatePath
     )
-    $Section["ResourceName"]=$key.replace("._","")
     $templateContent=Get-Content "$templatePath\$($Section['Role'])"
-    $EnvVariables=@()
-    $Section.Keys|%{$replaced=$Section[$_].replace('\','\\').replace('"','\"').replace("'","''");$EnvVariables+="""[Environment]::SetEnvironmentVariable('$_','$replaced','Machine')"",`n"}
-    if($Section["DC"]){
-        $Section["FetchDcIp"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["'+$Section["DC"]+'", "PrivateIp"]},"'',''Machine'')"]]},'
-    }
-    else{
-        $Section["FetchDcIp"]=""
-    }
-    if(-not $Section["InstanceName"]){
-        $Section["InstanceName"]=""
-    }
-    if(-not $Section["InstanceRoleProfile"]){
-        $Section["InstanceRoleProfile"]='""'
-    }
-    $Section["EnvVariables"]=$EnvVariables
     $Section.Keys|%{$key=$_;$templateContent=($templateContent|%{$_.replace("#{$key}",$Section[$key])})}
     $matchItems=$templateContent -join "`n"| select-string -Pattern "#\{(.*)\}" -AllMatches | % { $_.Matches } |%{$_.Groups[1].value}
     if($matchItems){
