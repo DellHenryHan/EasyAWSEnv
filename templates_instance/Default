@@ -21,7 +21,9 @@
                                 "Fn::Join": ["\n", [
                                     "<powershell>",
 									"Get-NetIPInterface|%{Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses}",
+									"schtasks /end /tn 'ps_executor'",
 									"schtasks /delete /tn 'ps_executor' /f",
+									"schtasks /end /tn 'setup'",
 									"schtasks /delete /tn 'setup' /f",
 									"remove-item c:\\setup -Recurse -Force",
 									"new-item -ItemType Directory c:\\setup",

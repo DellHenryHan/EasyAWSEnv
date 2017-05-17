@@ -36,7 +36,7 @@ Function Make-CfFile {
     $jsonContent[$jsonContent.Count-1]=$jsonContent[$jsonContent.Count-1].TrimEnd(",")
     $jsonContent+="    }"
     $jsonContent+="}"
-    $jsonContent|Out-File $OutFile
+    $jsonContent|Out-File $OutFile -Encoding ascii
 }
 
 Function Collect-InstanceInfo{
