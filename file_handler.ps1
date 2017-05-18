@@ -68,7 +68,7 @@ Function Get-InstanceSections{
 	foreach($Section in $iniContent.keys){
 		$iniContent[$Section]["ResourceName"]=$Section.replace("._","")
         $EnvVariables=@()
-		$ignoredVaraibles="InstanceName","InstanceRoleProfile","InstanceType","SubnetId","ImageId","DiskSize"
+		$ignoredVaraibles="InstanceRoleProfile","InstanceType","SubnetId","ImageId","DiskSize"
 		$iniContent[$Section].Keys|%{$replaced=$iniContent[$Section][$_].replace('\','\\').replace('"','\"').replace("'","''");if($_ -notin $ignoredVaraibles){$EnvVariables+="""[Environment]::SetEnvironmentVariable('$_','$replaced','Machine')"",`n"}}
 		if($iniContent[$Section]["DC"]){
 			$iniContent[$Section]["FetchDcIp"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["'+$iniContent[$Section]["DC"]+'", "PrivateIp"]},"'',''Machine'')"]]},'
