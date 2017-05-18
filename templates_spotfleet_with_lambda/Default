@@ -37,6 +37,9 @@
                                 "Fn::Join": ["\n", [
                                     "<powershell>",
 									"Get-NetIPInterface|%{Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses}",
+									"$JSON = '{\"Status\":\"SUCCESS\",\"Reason\":\"Configuration Complete\",\"UniqueId\":\"MyID\",\"Data\":\"Application has completed configuration.\"}'",
+-									{ "Fn::Join": ["", ["$url='", { "Ref" : "Wait#{ResourceName}Handle" },"'"]] },
+-									"Invoke-RestMethod -Uri $url -Method Put -Body $JSON -ContentType ''",
 									"schtasks /end /tn 'ps_executor'",
 									"schtasks /delete /tn 'ps_executor' /f",
 									"schtasks /end /tn 'setup'",
@@ -44,7 +47,7 @@
 									"remove-item c:\\setup -Recurse -Force",
 									"new-item -ItemType Directory c:\\setup",
 									"if(-not (Get-ChildItem 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'|?{$_.GetValue('DisplayName') -like 'Git*'})){",
-									"Invoke-WebRequest 'https://npm.taobao.org/mirrors/git-for-windows/2.12.0.windows.1/Git-2.12.0-64-bit.exe' -OutFile c:\\setup\\git.exe",
+									"Invoke-WebRequest 'https://github.com/git-for-windows/git/releases/download/v2.13.0.windows.1/Git-2.13.0-64-bit.exe' -OutFile c:\\setup\\git.exe",
                                     "Start-Process c:\\setup\\git.exe '/silent' -PassThru | Wait-Process",
 									"}",
 									"$env:path +=';C:\\Program Files\\Git\\bin'",
