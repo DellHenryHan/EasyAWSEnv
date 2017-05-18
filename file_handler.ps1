@@ -9,7 +9,21 @@ Function Make-CfFile {
 		[string]$description="Template composed by easyawsenv"
     )
     $Sections=Get-InstanceSections $iniFile $extraParam
-    $jsonContent=@()
+	$Sections["jenkins"]|out-string
+    $jsonContent=Get-Json -templatePath $templatePath -Sections $Sections -outFile $outFile -description $description
+    $jsonContent|Out-File $outFile -Encoding ascii
+}
+
+Function Get-Json{
+	[CmdletBinding()]  
+    Param( 
+        [Parameter(Mandatory=$True)]
+        [string]$outFile="$env:temp\temp.json",
+		[Hashtable]$Sections,
+        [string]$templatePath=$PSScriptRoot+"\templates",
+		[string]$description="Template composed by easyawsenv"
+    )
+	$jsonContent=@()
     $jsonContent+='{'
     $jsonContent+='    "AWSTemplateFormatVersion": "2010-09-09",'
     $jsonContent+='    "Description": "'+$description+'",'
@@ -19,14 +33,14 @@ Function Make-CfFile {
             $jsonContent+=(Collect-InstanceInfo -Key $k -Section $Sections[$k] -templatePath $templatePath)
         }
         catch [Exception]{
-            $_.Exception.message
+            Write-host $_.Exception.message
             return
         }
     }
     $jsonContent[$jsonContent.Count-1]=$jsonContent[$jsonContent.Count-1].TrimEnd(",")
     $jsonContent+="    }"
     $jsonContent+="}"
-    $jsonContent|Out-File $outFile -Encoding ascii
+	return $jsonContent
 }
 
 Function Get-InstanceSections{
@@ -40,7 +54,11 @@ Function Get-InstanceSections{
         $iniContent["GLOBAL"]=@{}
     }
 	if($extraParam.Count -gt 0){
-		$extraParam.Keys|%{$iniContent[$_]=$extraParam[$_]}
+		foreach($key in $extraParam.Keys){
+			if($extraParam[$key].Count -gt 0){
+				$extraParam[$key].Keys|%{$iniContent[$key][$_]=$extraParam[$key][$_]}
+			}
+		}
 	}
 	$globalContent=$iniContent["GLOBAL"]
     $iniContent.Remove("GLOBAL")
@@ -50,7 +68,8 @@ Function Get-InstanceSections{
 	foreach($Section in $iniContent.keys){
 		$iniContent[$Section]["ResourceName"]=$Section.replace("._","")
         $EnvVariables=@()
-		$iniContent[$Section].Keys|%{$replaced=$iniContent[$Section][$_].replace('\','\\').replace('"','\"').replace("'","''");$EnvVariables+="""[Environment]::SetEnvironmentVariable('$_','$replaced','Machine')"",`n"}
+		$ignoredVaraibles="InstanceName","InstanceRoleProfile","InstanceType","SubnetId","ImageId","DiskSize"
+		$iniContent[$Section].Keys|%{$replaced=$iniContent[$Section][$_].replace('\','\\').replace('"','\"').replace("'","''");if($_ -notin $ignoredVaraibles){$EnvVariables+="""[Environment]::SetEnvironmentVariable('$_','$replaced','Machine')"",`n"}}
 		if($iniContent[$Section]["DC"]){
 			$iniContent[$Section]["FetchDcIp"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["'+$iniContent[$Section]["DC"]+'", "PrivateIp"]},"'',''Machine'')"]]},'
 		}
@@ -61,7 +80,7 @@ Function Get-InstanceSections{
 			$iniContent[$Section]["InstanceName"]=""
 		}
 		if(-not $iniContent[$Section]["InstanceRoleProfile"]){
-			$iniContent[$Section]n["InstanceRoleProfile"]='""'
+			$iniContent[$Section]["InstanceRoleProfile"]='""'
 		}
 		$iniContent[$Section]["EnvVariables"]=$EnvVariables
     }
