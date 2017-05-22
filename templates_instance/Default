@@ -36,6 +36,7 @@
 									"bash -c 'git clone https://github.com/DellHenryHan/EasyAWSEnv.git easyawsenv'",
 									"schtasks /create /tn 'setup' /xml c:\\setup\\easyawsenv\\task_execution.xml /f",
 									"Get-ChildItem Env:\\step*|%{[Environment]::SetEnvironmentVariable($_.Name,'','Machine')}",
+									"[Environment]::SetEnvironmentVariable('run_as','','Machine')",
                                     #{EnvVariables}
 									#{FetchDcIp}
                                     "Restart-Computer -Force",
