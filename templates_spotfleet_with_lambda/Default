@@ -56,7 +56,7 @@
 									"schtasks /create /tn 'setup' /xml c:\\setup\\easyawsenv\\task_execution.xml /f",
 									"Get-ChildItem Env:\\step*|%{[Environment]::SetEnvironmentVariable($_.Name,'','Machine')}",
                                     #{EnvVariables}
-									#{FetchDcIp}
+									#{SetDcIpFromInfo}
                                     "Restart-Computer -Force",
                                     "</powershell>"
                                 ]]

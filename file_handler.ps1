@@ -9,7 +9,6 @@ Function Make-CfFile {
 		[string]$description="Template composed by easyawsenv"
     )
     $Sections=Get-InstanceSections $iniFile $extraParam
-	$Sections["jenkins"]|out-string
     $jsonContent=Get-Json -templatePath $templatePath -Sections $Sections -outFile $outFile -description $description
     $jsonContent|Out-File $outFile -Encoding ascii
 }
@@ -17,8 +16,6 @@ Function Make-CfFile {
 Function Get-Json{
 	[CmdletBinding()]  
     Param( 
-        [Parameter(Mandatory=$True)]
-        [string]$outFile="$env:temp\temp.json",
 		[Hashtable]$Sections,
         [string]$templatePath=$PSScriptRoot+"\templates",
 		[string]$description="Template composed by easyawsenv"
@@ -72,9 +69,11 @@ Function Get-InstanceSections{
 		$iniContent[$Section].Keys|%{$replaced=$iniContent[$Section][$_].replace('\','\\').replace('"','\"').replace("'","''");if($_ -notin $ignoredVaraibles){$EnvVariables+="""[Environment]::SetEnvironmentVariable('$_','$replaced','Machine')"",`n"}}
 		if($iniContent[$Section]["DC"]){
 			$iniContent[$Section]["FetchDcIp"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["'+$iniContent[$Section]["DC"]+'", "PrivateIp"]},"'',''Machine'')"]]},'
+            $iniContent[$Section]["SetDcIpFromInfo"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["Update'+$iniContent[$Section]["DC"]+'InstanceInfo", "privateip"]},"'',''Machine'')"]]},'
 		}
 		else{
 			$iniContent[$Section]["FetchDcIp"]=""
+            $iniContent[$Section]["SetDcIpFromInfo"]=""
 		}
 		if(-not $iniContent[$Section]["InstanceName"]){
 			$iniContent[$Section]["InstanceName"]=""
