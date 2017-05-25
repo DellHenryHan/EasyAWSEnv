@@ -9,7 +9,7 @@ Function Make-CfFile {
 		[string]$description="Template composed by easyawsenv"
     )
     $Sections=Get-InstanceSections $iniFile $extraParam
-    $jsonContent=Get-Json -templatePath $templatePath -Sections $Sections -outFile $outFile -description $description
+    $jsonContent=Get-Json -templatePath $templatePath -Sections $Sections -description $description
     $jsonContent|Out-File $outFile -Encoding ascii
 }
 
