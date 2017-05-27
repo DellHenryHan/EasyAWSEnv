@@ -94,7 +94,7 @@
 		   "Type" : "AWS::CloudFormation::WaitCondition",
 		   "Properties" : {
 			  "Handle"  : { "Ref" : "Wait#{ResourceName}Handle" },
-			  "Timeout" : "1200"
+			  "Timeout" : "1800"
 		   },
 		   "DependsOn": "#{ResourceName}"
 		},
