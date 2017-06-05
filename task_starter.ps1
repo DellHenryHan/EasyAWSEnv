@@ -15,8 +15,6 @@ if($env:run_as){
     log ("+"*10+"Process scripts at startup. Current user: $env:run_as"+"+"*10)
     schtasks /delete /tn ps_executor /f
     schtasks /create /tn ps_executor /ru $env:run_as /rp $env:run_pwd /tr ("PowerShell -STA -NonInteractive -ExecutionPolicy bypass -file $basedir\ps_executer.ps1") /RL HIGHEST /sc once /st 00:00
-	log "remove environment variable run_as"
-	[Environment]::SetEnvironmentVariable("run_as", "", "Machine")
 }
 else{
     log ("+"*10+"Process scripts at startup. Current user: System"+"+"*10)
