@@ -48,7 +48,7 @@ Generate Cloudformation template with powershell, select proper templates accord
 
 ```
 . .\file_handler.ps1
-Make-CfFile -IniFile .\myinstance.ini -teamplatePath .\templates_instance
+Make-CfFile -IniFile .\myinstance.ini -templatePath .\templates_instance
 ```
 
 ## Start specific instances
