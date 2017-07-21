@@ -40,6 +40,28 @@ Function Get-Json{
 	return $jsonContent
 }
 
+Function Get-CompleteJson{
+	[CmdletBinding()]  
+    Param( 
+		[Hashtable]$Sections,
+        [string]$templatePath=$PSScriptRoot+"\templates",
+		[string]$description="Template composed by easyawsenv"
+    )
+	$jsonContent=Get-Content $templatePath\Prefix
+    foreach($k in $Sections.Keys){
+        try{
+            $jsonContent+=(Collect-InstanceInfo -Key $k -Section $Sections[$k] -templatePath $templatePath)
+        }
+        catch [Exception]{
+            Write-host $_.Exception.message
+            return
+        }
+    }
+    $jsonContent[$jsonContent.Count-1]=$jsonContent[$jsonContent.Count-1].TrimEnd(",")
+    $jsonContent+=Get-Content $templatePath\Suffix
+	return $jsonContent
+}
+
 Function Get-InstanceSections{
 	Param( 
         [Parameter(Mandatory=$True)]  
@@ -65,8 +87,29 @@ Function Get-InstanceSections{
 	foreach($Section in $iniContent.keys){
 		$iniContent[$Section]["ResourceName"]=$Section.replace("._","")
         $EnvVariables=@()
+        $UserScript=@"
+Get-NetIPInterface|%{Set-DnsClientServerAddress -InterfaceIndex `$_.ifIndex -ResetServerAddresses}
+schtasks /end /tn 'ps_executor'
+schtasks /delete /tn 'ps_executor' /f
+schtasks /end /tn 'setup'
+schtasks /delete /tn 'setup' /f
+remove-item c:\setup -Recurse -Force
+new-item -ItemType Directory c:\setup
+if(-not (Get-ChildItem 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall'|?{`$_.GetValue('DisplayName') -like 'Git*'})){
+Invoke-WebRequest 'https://github.com/git-for-windows/git/releases/download/v2.13.0.windows.1/Git-2.13.0-64-bit.exe' -OutFile c:\setup\git.exe
+Start-Process c:\setup\git.exe '/silent' -PassThru | Wait-Process
+}
+`$env:path +=';C:\Program Files\Git\bin'
+cd c:\setup
+bash -c 'git clone https://github.com/DellHenryHan/EasyAWSEnv.git easyawsenv'
+schtasks /create /tn 'setup' /xml c:\setup\easyawsenv\task_execution.xml /f
+Get-ChildItem Env:\step*|%{[Environment]::SetEnvironmentVariable(`$_.Name,'','Machine')}
+[Environment]::SetEnvironmentVariable('run_as','','Machine')
+
+"@
 		$ignoredVaraibles="InstanceRoleProfile","InstanceType","SubnetId","ImageId","DiskSize"
 		$iniContent[$Section].Keys|%{$replaced=$iniContent[$Section][$_].replace('\','\\').replace('"','\"').replace("'","''");if($_ -notin $ignoredVaraibles){$EnvVariables+="""[Environment]::SetEnvironmentVariable('$_','$replaced','Machine')"",`n"}}
+        $iniContent[$Section].Keys|%{$UserScript+="[Environment]::SetEnvironmentVariable('$_','$($iniContent[$Section][$_].replace("'","''"))','Machine')`n"}
 		if($iniContent[$Section]["DC"]){
 			$iniContent[$Section]["FetchDcIp"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["'+$iniContent[$Section]["DC"]+'", "PrivateIp"]},"'',''Machine'')"]]},'
             $iniContent[$Section]["SetDcIpFromInfo"]='{ "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable(''DcIp'',''",{"Fn::GetAtt": ["Update'+$iniContent[$Section]["DC"]+'InstanceInfo", "privateip"]},"'',''Machine'')"]]},'
@@ -82,6 +125,8 @@ Function Get-InstanceSections{
 			$iniContent[$Section]["InstanceRoleProfile"]='""'
 		}
 		$iniContent[$Section]["EnvVariables"]=$EnvVariables
+        $UserScript+="Restart-Computer -Force`n"
+        $iniContent[$Section]["UserScript"]=[Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($UserScript))
     }
 	return $iniContent
 }
