@@ -9,13 +9,23 @@
                     "vmSize": "#{InstanceType}"
                 },
                 "storageProfile": {
+                    "imageReference": {
+                        "id":"#{ImageId}"
+                    },
                     "osDisk": {
-                        "createOption": "Attach",
+                        "osType": "Windows",
+                        "name": "#{ResourceName}_OsDisk",
+                        "createOption": "FromImage",
                         "caching": "ReadWrite",
-						"osType": "Windows",
-						"managedDisk": {
-						  "id": "[resourceId('Microsoft.Compute/disks', '#{ResourceName}_disk')]"
-						}
+                        "diskSizeGB": #{DiskSize}
+                    }
+                },
+                "osProfile": {
+                    "computerName": "#{ResourceName}",
+                    "adminUsername": "#{adminUsername}",
+					"adminPassword":"#{adminPassword}",
+                    "windowsConfiguration": {
+                        "provisionVMAgent": true
                     }
                 },
                 "networkProfile": {
@@ -28,24 +38,8 @@
 				"licenseType": "Windows_Server"
             },
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', '#{ResourceName}_networkif')]",
-				"[resourceId('Microsoft.Compute/disks', '#{ResourceName}_disk')]"
+                "[resourceId('Microsoft.Network/networkInterfaces', '#{ResourceName}_networkif')]"
             ]
-        },
-		{
-            "type": "Microsoft.Compute/disks",
-            "name": "#{ResourceName}_disk",
-            "apiVersion": "2016-04-30-preview",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "accountType": "#{DiskType}",
-                "osType": "Windows",
-                "creationData": {
-                    "createOption": "Copy",
-                    "sourceResourceId": "#{SnapshotId}"
-                },
-                "diskSizeGB": #{DiskSize}
-			}
         },
 		{
             "type": "Microsoft.Network/networkInterfaces",
@@ -72,12 +66,7 @@
                 "enableIPForwarding": false,
                 "networkSecurityGroup": {
                     "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'sg')]"
-                },
-				"dnsSettings": {
-				  "dnsServers": [
-					"#{DcIp}"
-				  ]
-				}
+                }
             },
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', '#{ResourceName}_public_ip')]",

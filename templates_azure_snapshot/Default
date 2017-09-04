@@ -1,0 +1,17 @@
+		{
+            "type": "Microsoft.Compute/snapshots",
+            "name": "#{ResourceName}",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "accountType": "Premium_LRS",
+                "osType": "Windows",
+                "creationData": {
+                    "createOption": "Copy",
+                    "sourceResourceId": "[subscription().id]/resourceGroups/MNEConstant/providers/Microsoft.Compute/snapshots/#{ResourceName}"
+                },
+                "diskSizeGB": 128
+            },
+            "dependsOn": []
+        }
