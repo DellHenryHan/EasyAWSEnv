@@ -1,0 +1,69 @@
+        "#{ResourceName}": {
+            "Type": "AWS::EC2::SpotFleet",
+            "Properties": {
+                "SpotFleetRequestConfigData": {
+                    "IamFleetRole": #{IAMRole},
+                    "SpotPrice": "3",
+                    "TargetCapacity": 1,
+                    "LaunchSpecifications": [{
+                        "EbsOptimized": "true",
+                        "InstanceType": "#{InstanceType}",
+						"ImageId": {"Fn::GetAtt":["Get#{ResourceName}ImageId","imageId"]},
+                        "BlockDeviceMappings": [{
+                                "DeviceName": "/dev/sda1",
+                                "Ebs": {
+                                    "VolumeSize": #{DiskSize},
+                                    "VolumeType": "gp2"
+                                }
+                            },
+                            { "DeviceName": "xvdca", "NoDevice": "" }, { "DeviceName": "xvdcb", "NoDevice": "" }, { "DeviceName": "xvdcc", "NoDevice": "" }, { "DeviceName": "xvdcd", "NoDevice": "" }, { "DeviceName": "xvdce", "NoDevice": "" },
+                            { "DeviceName": "xvdcf", "NoDevice": "" }, { "DeviceName": "xvdcg", "NoDevice": "" }, { "DeviceName": "xvdch", "NoDevice": "" }, { "DeviceName": "xvdci", "NoDevice": "" }, { "DeviceName": "xvdcj", "NoDevice": "" },
+                            { "DeviceName": "xvdck", "NoDevice": "" }, { "DeviceName": "xvdcl", "NoDevice": "" }, { "DeviceName": "xvdcm", "NoDevice": "" }, { "DeviceName": "xvdcn", "NoDevice": "" }, { "DeviceName": "xvdco", "NoDevice": "" },
+                            { "DeviceName": "xvdcp", "NoDevice": "" }, { "DeviceName": "xvdcq", "NoDevice": "" }, { "DeviceName": "xvdcr", "NoDevice": "" }, { "DeviceName": "xvdcs", "NoDevice": "" }, { "DeviceName": "xvdct", "NoDevice": "" },
+                            { "DeviceName": "xvdcu", "NoDevice": "" }, { "DeviceName": "xvdcv", "NoDevice": "" }, { "DeviceName": "xvdcw", "NoDevice": "" }, { "DeviceName": "xvdcx", "NoDevice": "" }, { "DeviceName": "xvdcy", "NoDevice": "" },
+                            { "DeviceName": "xvdcz", "NoDevice": "" }
+                        ],
+                        "IamInstanceProfile": {
+                            "Arn": #{InstanceRoleProfile}
+                        },
+                        "NetworkInterfaces": [{
+                            "AssociatePublicIpAddress": "true",
+                            "DeviceIndex": "0",
+                            "DeleteOnTermination": "true",
+                            "SubnetId": #{SubnetId}
+                        }],
+                        "UserData": {
+                            "Fn::Base64": {
+                                "Fn::Join": ["\n", [
+                                    "#!/bin/bash",
+                                    { "Fn::Join": ["", ["sed -i 's/10.0.0.84/", {"Fn::GetAtt": ["UpdatedominoInstanceInfo", "privateip"]}, "/g' /etc/hosts"]]},                                    
+                                    "su notes",
+                                    "cd /local/dominoData",
+                                    "/opt/ibm/domino/bin/server"
+                                ]]
+                            }
+                        }
+                    }]
+                }
+            }
+        },
+        "Update#{ResourceName}InstanceInfo": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Version": "1.0",
+            "Properties": {
+                "ServiceToken": #{UpdateInstanceToken},
+                "SpotId": { "Ref": "#{ResourceName}" },
+                "InstanceTags": [{ "Key": "Name", "Value": "#{InstanceName}" }],
+                "R53Names": ["#{R53Name}"],
+				"SecurityGroups":#{SecurityGroup}
+            }           
+        },
+        "Get#{ResourceName}ImageId": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Version": "1.0",
+            "Properties": {
+                "ServiceToken": #{GetImageIdToken},
+                "Owner": "#{ImageOwner}",
+                "ImageName": "#{ImageName}"
+            }
+        },		
