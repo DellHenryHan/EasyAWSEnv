@@ -56,7 +56,8 @@
                 "InstanceTags": [{ "Key": "Name", "Value": "#{InstanceName}" }],
                 "R53Names": ["#{R53Name}"],
 				"SecurityGroups":#{SecurityGroup}
-            }           
+            },
+            "DependsOn": "#{ResourceName}"           
         },
         "Get#{ResourceName}ImageId": {
             "Type": "AWS::CloudFormation::CustomResource",
