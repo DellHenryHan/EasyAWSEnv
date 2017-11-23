@@ -37,7 +37,7 @@
                                 "Fn::Join": ["\n", [
                                     "#!/bin/bash",                                                                    
                                     "su notes",
-                                    "cd /local/dominoData",
+                                    "cd /local/dominodata",
                                     "/opt/ibm/domino/bin/server"
                                 ]]
                             }
