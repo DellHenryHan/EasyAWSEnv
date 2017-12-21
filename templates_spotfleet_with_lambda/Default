@@ -5,6 +5,7 @@
                     "IamFleetRole": #{IAMRole},
                     "SpotPrice": "3",
                     "TargetCapacity": 1,
+                    "Type":"request",
                     "LaunchSpecifications": [{
                         "EbsOptimized": "true",
                         "InstanceType": "#{InstanceType}",
