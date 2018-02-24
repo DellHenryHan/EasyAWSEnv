@@ -38,7 +38,7 @@
                                 "Fn::Join": ["\n", [
                                     "<powershell>",
 									"[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol,[Net.SecurityProtocolType]::Tls12",
-									"'[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol,[Net.SecurityProtocolType]::Tls12'|Out-File ($PSHOME+'\profile.ps1')"
+									"'[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol,[Net.SecurityProtocolType]::Tls12'|Out-File ($PSHOME+'\\profile.ps1')",
 									"Get-NetIPInterface|%{Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses}",
 									"$JSON = '{\"Status\":\"SUCCESS\",\"Reason\":\"Configuration Complete\",\"UniqueId\":\"MyID\",\"Data\":\"Application has completed configuration.\"}'",
 									{ "Fn::Join": ["", ["$url='", { "Ref" : "Wait#{ResourceName}Handle" },"'"]] },
