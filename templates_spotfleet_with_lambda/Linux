@@ -53,7 +53,7 @@
             "Properties": {
                 "ServiceToken": #{UpdateInstanceToken},
                 "SpotId": { "Ref": "#{ResourceName}" },
-                "InstanceTags": [{ "Key": "Name", "Value": "#{InstanceName}" }],
+                "InstanceTags": [{ "Key": "Name", "Value": "#{InstanceName}" },{ "Key": "team", "Value": "#{TeamName}" }],
                 "R53Names": ["#{R53Name}"],
 				"SecurityGroups":#{SecurityGroup}
             },
