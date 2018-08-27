@@ -4,7 +4,7 @@ Function Make-CfFile {
         [Parameter(Mandatory=$True)]  
         [string]$iniFile,
         [Hashtable]$extraParam=@{},
-        [string]$outFile="$env:temp\temp.json",
+        [string]$outFile="c:\temp.json",
         [string]$templatePath=$PSScriptRoot+"\templates",
 		[string]$description="Template composed by easyawsenv"
     )
