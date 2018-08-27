@@ -1,0 +1,104 @@
+        "#{ResourceName}": {
+            "Type": "AWS::EC2::SpotFleet",
+            "Properties": {
+                "SpotFleetRequestConfigData": {
+                    "IamFleetRole": #{IAMRole},
+                    "SpotPrice": "3",
+                    "TargetCapacity": 1,
+                    "Type":"request",
+                    "LaunchSpecifications": [{
+                        "EbsOptimized": "true",
+                        "InstanceType": "#{InstanceType}",
+						"ImageId": {"Fn::GetAtt":["Get#{ResourceName}ImageId","imageId"]},
+                        "BlockDeviceMappings": [{
+                                "DeviceName": "/dev/sda1",
+                                "Ebs": {
+                                    "VolumeSize": #{DiskSize},
+                                    "VolumeType": "gp2"
+                                }
+                            },
+                            { "DeviceName": "xvdca", "NoDevice": "" }, { "DeviceName": "xvdcb", "NoDevice": "" }, { "DeviceName": "xvdcc", "NoDevice": "" }, { "DeviceName": "xvdcd", "NoDevice": "" }, { "DeviceName": "xvdce", "NoDevice": "" },
+                            { "DeviceName": "xvdcf", "NoDevice": "" }, { "DeviceName": "xvdcg", "NoDevice": "" }, { "DeviceName": "xvdch", "NoDevice": "" }, { "DeviceName": "xvdci", "NoDevice": "" }, { "DeviceName": "xvdcj", "NoDevice": "" },
+                            { "DeviceName": "xvdck", "NoDevice": "" }, { "DeviceName": "xvdcl", "NoDevice": "" }, { "DeviceName": "xvdcm", "NoDevice": "" }, { "DeviceName": "xvdcn", "NoDevice": "" }, { "DeviceName": "xvdco", "NoDevice": "" },
+                            { "DeviceName": "xvdcp", "NoDevice": "" }, { "DeviceName": "xvdcq", "NoDevice": "" }, { "DeviceName": "xvdcr", "NoDevice": "" }, { "DeviceName": "xvdcs", "NoDevice": "" }, { "DeviceName": "xvdct", "NoDevice": "" },
+                            { "DeviceName": "xvdcu", "NoDevice": "" }, { "DeviceName": "xvdcv", "NoDevice": "" }, { "DeviceName": "xvdcw", "NoDevice": "" }, { "DeviceName": "xvdcx", "NoDevice": "" }, { "DeviceName": "xvdcy", "NoDevice": "" },
+                            { "DeviceName": "xvdcz", "NoDevice": "" }
+                        ],
+                        "IamInstanceProfile": {
+                            "Arn": #{InstanceRoleProfile}
+                        },
+                        "NetworkInterfaces": [{
+                            "AssociatePublicIpAddress": "true",
+                            "DeviceIndex": "0",
+                            "DeleteOnTermination": "true",
+                            "SubnetId": #{SubnetId}
+                        }],
+                        "UserData": {
+                            "Fn::Base64": {
+                                "Fn::Join": ["\n", [
+                                    "<powershell>",
+									"[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol,[Net.SecurityProtocolType]::Tls12",
+									"'[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol,[Net.SecurityProtocolType]::Tls12'|Out-File ($PSHOME+'\\profile.ps1')",
+									"Get-NetIPInterface|%{Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ResetServerAddresses}",
+									"$JSON = '{\"Status\":\"SUCCESS\",\"Reason\":\"Configuration Complete\",\"UniqueId\":\"MyID\",\"Data\":\"Application has completed configuration.\"}'",
+									{ "Fn::Join": ["", ["$url='", { "Ref" : "Wait#{ResourceName}Handle" },"'"]] },
+									"Invoke-RestMethod -Uri $url -Method Put -Body $JSON",
+									"schtasks /end /tn 'ps_executor'",
+									"schtasks /delete /tn 'ps_executor' /f",
+									"schtasks /end /tn 'setup'",
+									"schtasks /delete /tn 'setup' /f",
+									"remove-item c:\\setup -Recurse -Force",
+									"new-item -ItemType Directory c:\\setup",
+									"if(-not (Get-ChildItem 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'|?{$_.GetValue('DisplayName') -like 'Git*'})){",
+									"Invoke-WebRequest 'https://github.com/git-for-windows/git/releases/download/v2.13.0.windows.1/Git-2.13.0-64-bit.exe' -OutFile c:\\setup\\git.exe",
+                                    "Start-Process c:\\setup\\git.exe '/silent' -PassThru | Wait-Process",
+									"}",
+									"$env:path +=';C:\\Program Files\\Git\\bin'",
+									"cd c:\\setup",
+									"bash -c 'git clone https://github.com/DellHenryHan/EasyAWSEnv.git easyawsenv'",
+									"schtasks /create /tn 'setup' /xml c:\\setup\\easyawsenv\\task_execution.xml /f",
+									"Get-ChildItem Env:\\step*|%{[Environment]::SetEnvironmentVariable($_.Name,'','Machine')}",
+									"[Environment]::SetEnvironmentVariable('run_as','','Machine')",
+                                    #{EnvVariables}
+                                    { "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable('DcIp','",{"Fn::GetAtt": ["UpdatedcInstanceInfo", "privateip"]},"','Machine')"]]},
+                                    "Restart-Computer -Force",
+                                    "</powershell>"
+                                ]]
+                            }
+                        }
+                    }]
+                }
+            }
+        },
+        "Update#{ResourceName}InstanceInfo": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Version": "1.0",
+            "Properties": {
+                "ServiceToken": #{UpdateInstanceToken},
+                "SpotId": { "Ref": "#{ResourceName}" },
+                "InstanceTags": [{ "Key": "Name", "Value": "#{InstanceName}" },{ "Key": "team", "Value": "#{TeamName}" }],
+                "R53Names": ["#{R53Name}"],
+				"SecurityGroups":#{SecurityGroup}
+            },
+            "DependsOn": "Wait#{ResourceName}Condition"
+        },
+        "Get#{ResourceName}ImageId": {
+            "Type": "AWS::CloudFormation::CustomResource",
+            "Version": "1.0",
+            "Properties": {
+                "ServiceToken": #{GetImageIdToken},
+                "Owner": "#{ImageOwner}",
+                "ImageName": "#{ImageName}"
+            }
+        },
+		"Wait#{ResourceName}Handle" : {
+		   "Type" : "AWS::CloudFormation::WaitConditionHandle"
+		},
+		"Wait#{ResourceName}Condition" : {
+		   "Type" : "AWS::CloudFormation::WaitCondition",
+		   "Properties" : {
+			  "Handle"  : { "Ref" : "Wait#{ResourceName}Handle" },
+			  "Timeout" : "1800"
+		   },
+		   "DependsOn": "#{ResourceName}"
+		},
