@@ -61,7 +61,6 @@
 									"[Environment]::SetEnvironmentVariable('run_as','','Machine')",
                                     #{EnvVariables}
 									#{SetDcIpFromInfo}
-                                    { "Fn::Join": ["", ["[Environment]::SetEnvironmentVariable('demoIp','",{"Fn::GetAtt": ["Updatedc2InstanceInfo", "privateip"]},"','Machine')"]]},
                                     "Restart-Computer -Force",
                                     "</powershell>"
                                 ]]
