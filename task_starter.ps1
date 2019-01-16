@@ -11,6 +11,7 @@ else{
 if(-not (Test-Path C:\setup)){
     New-Item C:\setup -ItemType Directory -Force
 }
+$basedir="C:\setup\easyawsenv"
 if($env:run_as){
     log ("+"*10+"Process scripts at startup. Current user: $env:run_as"+"+"*10)
     schtasks /delete /tn ps_executor /f
