@@ -15,7 +15,7 @@ if($env:run_as){
     log ("+"*10+"Process scripts at startup. Current user: $env:run_as"+"+"*10)
     Unregister-ScheduledTask -TaskName "ps_executor" -Confirm:$false
     $Time = New-ScheduledTaskTrigger -At 00:00 -Once
-    $action = New-ScheduledTaskAction -Execute "PowerShell -STA -NonInteractive -ExecutionPolicy bypass -file $basedir\ps_executer.ps1"
+    $action = New-ScheduledTaskAction -Execute "PowerShell.exe" -Argument "-STA -NonInteractive -ExecutionPolicy bypass -file $basedir\ps_executer.ps1"
     while($true){
         $Error.Clear()
         Register-ScheduledTask -TaskName "ps_executor" -User $env:run_as -Password $env:run_pwd -Trigger $Time -Action $action -RunLevel Highest
